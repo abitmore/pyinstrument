@@ -1,2 +1,1 @@
--e .[test,bin,docs,examples,types]
-prek
+-e .[test,bin,docs,examples,tools,types]
