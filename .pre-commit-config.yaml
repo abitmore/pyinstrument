@@ -66,4 +66,4 @@ repos:
         stages: [manual]
         exclude: ^pyinstrument/vendor/
 
-exclude: ^pyinstrument/renderers/html_resources/app.js$|^pyinstrument/vendor
+exclude: ^pyinstrument/renderers/html_resources/app.js$|^pyinstrument/vendor|^test/appdirs.py$
