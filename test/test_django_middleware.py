@@ -24,11 +24,11 @@ def stop_profiler(request):
         request.profiler.stop()
 
 
-def test_show_callback_is_respected_with_profile_dir():
+def test_show_callback_is_respected_with_profile_dir(tmp_path):
     from django.test import override_settings
 
     with override_settings(
-        PYINSTRUMENT_PROFILE_DIR="/tmp/pyinstrument-test-profiles",
+        PYINSTRUMENT_PROFILE_DIR=str(tmp_path),
         PYINSTRUMENT_SHOW_CALLBACK=lambda request: False,
     ):
         request = RequestFactory().get("/")
@@ -39,11 +39,11 @@ def test_show_callback_is_respected_with_profile_dir():
             stop_profiler(request)
 
 
-def test_profile_dir_still_profiles_when_callback_allows():
+def test_profile_dir_still_profiles_when_callback_allows(tmp_path):
     from django.test import override_settings
 
     with override_settings(
-        PYINSTRUMENT_PROFILE_DIR="/tmp/pyinstrument-test-profiles",
+        PYINSTRUMENT_PROFILE_DIR=str(tmp_path),
         PYINSTRUMENT_SHOW_CALLBACK=lambda request: True,
     ):
         request = RequestFactory().get("/")
