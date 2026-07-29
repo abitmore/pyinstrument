@@ -14,7 +14,7 @@ from pyinstrument.frame import Frame
 from pyinstrument.renderers.speedscope import SpeedscopeEvent, SpeedscopeEventType, SpeedscopeFrame
 from pyinstrument.session import Session
 
-from .util import assert_never, busy_wait, flaky_in_ci
+from .util import assert_never, busy_wait, dummy_session, flaky_in_ci
 
 # Utilities #
 
@@ -41,6 +41,16 @@ class ClassWithMethods:
 
 
 # Tests #
+
+
+def test_session_root_frame_with_no_start_call_stack():
+    session = dummy_session()
+    session.frame_records = [(["root\x00file.py\x001"], 0.1)]
+
+    root_frame = session.root_frame()
+
+    assert root_frame is not None
+    assert root_frame.identifier == "root\x00file.py\x001"
 
 
 def test_collapses_multiple_calls_by_default():
