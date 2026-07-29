@@ -103,6 +103,7 @@ def test_pyinstrument_handles_interrupt_silently(ip, capsys):
 
 
 @pytest.mark.ipythonmagic
+@pytest.mark.filterwarnings("error:.*run_cell_async.*transform_cell.*:DeprecationWarning")
 def test_async_cell_with_pyinstrument(ip, capsys):
     ip.run_cell_magic(
         "pyinstrument",
@@ -127,7 +128,10 @@ def test_run_cell_async_cleans_up_event_loop(monkeypatch):
     from pyinstrument.magic.magic import PyinstrumentMagic
 
     class FakeIP:
-        async def run_cell_async(self, code):
+        def transform_cell(self, code):
+            return code
+
+        async def run_cell_async(self, code, **kwargs):
             await asyncio.sleep(0)
             return code
 
@@ -169,7 +173,10 @@ def test_run_cell_async_without_current_event_loop():
     from pyinstrument.magic.magic import PyinstrumentMagic
 
     class FakeIP:
-        async def run_cell_async(self, code):
+        def transform_cell(self, code):
+            return code
+
+        async def run_cell_async(self, code, **kwargs):
             return code
 
     asyncio.set_event_loop(None)

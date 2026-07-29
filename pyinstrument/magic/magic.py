@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import html
+import sys
 import threading
 import urllib.parse
 from ast import parse
@@ -302,7 +303,21 @@ class PyinstrumentMagic(Magics):
         thread = threading.Thread(target=loop.run_forever)
         try:
             thread.start()
-            coro = ip.run_cell_async(code)
+            if IPython.version_info >= (7, 17):  # type: ignore
+                preprocessing_exc_tuple = None
+                try:
+                    transformed_cell = ip.transform_cell(code)
+                except Exception:
+                    transformed_cell = code
+                    preprocessing_exc_tuple = sys.exc_info()
+
+                coro = ip.run_cell_async(
+                    code,
+                    transformed_cell=transformed_cell,
+                    preprocessing_exc_tuple=preprocessing_exc_tuple,
+                )
+            else:
+                coro = ip.run_cell_async(code)
             future = asyncio.run_coroutine_threadsafe(coro, loop)
             return future.result()
         finally:
