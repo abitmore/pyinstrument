@@ -260,8 +260,9 @@ class StackSampler:
                         overhead ({overheads["walltime_coarse"] * 1e9:.2g}
                         nanoseconds). You can enable it by setting
                         pyinstrument's interval to a value higher than
-                        {format_float_with_sig_figs(coarse_resolution,
-                        trim_zeroes=True)} seconds. If you're happy with the
+                        {
+                            format_float_with_sig_figs(coarse_resolution, trim_zeroes=True)
+                        } seconds. If you're happy with the
                         lower precision, this is the best option.
                         """
                     )

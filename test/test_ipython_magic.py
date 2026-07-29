@@ -1,11 +1,12 @@
 import asyncio
 import signal
 import textwrap
-from test.fake_time_util import fake_time
 from threading import Thread
 from time import sleep
 
 import pytest
+
+from test.fake_time_util import fake_time
 
 from .util import strip_ansi
 
