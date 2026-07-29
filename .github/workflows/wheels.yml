@@ -18,7 +18,7 @@ on:
 
 jobs:
   build_wheels:
-    name: Build wheels on ${{ matrix.archs }} for ${{ matrix.os }}
+    name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -26,10 +26,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        if: ${{ matrix.archs == 'aarch64' }}
-        uses: docker/setup-qemu-action@v4
 
       - uses: actions/setup-python@v5
         name: Install Python
@@ -56,10 +52,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up QEMU
-        if: ${{ matrix.archs == 'aarch64' }}
-        uses: docker/setup-qemu-action@v4
 
       - uses: actions/setup-python@v5
         name: Install Python
