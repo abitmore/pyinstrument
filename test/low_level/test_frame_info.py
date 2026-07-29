@@ -45,6 +45,11 @@ class AClass:
         return getter_function(frame)
 
 
+class OuterClass:
+    class InnerClass(AClass):
+        pass
+
+
 def frame_with_no_locals():
     return inspect.currentframe()
 
@@ -89,12 +94,14 @@ def test_frame_info_hide_false():
 
 
 instance = AClass()
+nested_instance = OuterClass.InnerClass()
 
 
 @pytest.mark.parametrize(
     "test_function",
     [
         instance.get_frame_info_for_a_method,
+        nested_instance.get_frame_info_for_a_method,
         AClass.get_frame_info_for_a_class_method,
         instance.get_frame_info_with_cell_variable,
         AClass.get_frame_info_for_a_class_method_where_cls_is_reassigned,

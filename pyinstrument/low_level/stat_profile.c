@@ -287,12 +287,29 @@ local_names_from_code(PyCodeObject *code)
 #endif
 }
 
+/**
+ * Returns a new reference to the qualified name of a type.
+ */
+static PyObject *
+_get_type_qualname(PyTypeObject *type) {
+    PyObject *qualname = PyObject_GetAttrString((PyObject *)type, "__qualname__");
+    if (qualname == NULL) {
+        return NULL;
+    }
+    if (!PyUnicode_Check(qualname)) {
+        Py_DECREF(qualname);
+        PyErr_SetString(PyExc_TypeError, "type __qualname__ must be a string");
+        return NULL;
+    }
+    return qualname;
+}
+
 #if PY_VERSION_HEX >= 0x030b0000 // Python 3.11.0
 /**
- * Returns a C-string containing the name of the class in the frame. The
- * memory belongs to the type object, so it should not be freed.
+ * Returns a new reference to the qualified name of the class in the frame,
+ * or NULL when the frame does not represent a method.
  */
-static const char *
+static PyObject *
 _get_class_name_of_frame(PyFrameObject *frame, PyCodeObject *code) {
     PyObject *localsNames = PyCode_GetVarnames(code);
 
@@ -323,7 +340,7 @@ _get_class_name_of_frame(PyFrameObject *frame, PyCodeObject *code) {
         return NULL;
     }
 
-    const char *result = NULL;
+    PyObject *result = NULL;
 
     PyObject *locals = PyFrame_GetLocals(frame);
 
@@ -343,7 +360,7 @@ _get_class_name_of_frame(PyFrameObject *frame, PyCodeObject *code) {
             return NULL;
         }
 
-        result = _PyType_Name(self->ob_type);
+        result = _get_type_qualname(Py_TYPE(self));
         Py_DECREF(self);
     }
     else if (has_cls && PyMapping_HasKey(locals, CLS_STRING)) {
@@ -356,8 +373,7 @@ _get_class_name_of_frame(PyFrameObject *frame, PyCodeObject *code) {
         }
 
         if (PyType_Check(cls)) {
-            PyTypeObject *type = (PyTypeObject *)cls;
-            result = _PyType_Name(type);
+            result = _get_type_qualname((PyTypeObject *)cls);
         }
         Py_DECREF(cls);
     }
@@ -399,7 +415,7 @@ _get_first_arg_from_cell_variables(PyFrameObject *frame, PyCodeObject *code) {
     return NULL;
 }
 
-static const char *
+static PyObject *
 _get_class_name_of_frame(PyFrameObject *frame, PyCodeObject *code) {
     // This code looks only at the first 'fast' frame local.
     //
@@ -447,14 +463,12 @@ _get_class_name_of_frame(PyFrameObject *frame, PyCodeObject *code) {
     }
 
     if (first_var_is_self) {
-        PyTypeObject *type = first_var->ob_type;
-        return _PyType_Name(type);
+        return _get_type_qualname(Py_TYPE(first_var));
     } else if (first_var_is_cls) {
         if (!PyType_Check(first_var)) {
             return NULL;
         }
-        PyTypeObject *type = (PyTypeObject *)first_var;
-        return _PyType_Name(type);
+        return _get_type_qualname((PyTypeObject *)first_var);
     } else {
         Py_FatalError("unreachable code");
     }
@@ -506,7 +520,7 @@ _get_frame_info(PyFrameObject *frame) {
     PyObject *line_number_attribute = NULL;
     PyObject *frame_hidden_attribute = NULL;
 
-    const char *class_name = _get_class_name_of_frame(frame, code);
+    PyObject *class_name = _get_class_name_of_frame(frame, code);
     if (class_name == NULL) {
         if (PyErr_Occurred()) {
             goto error;
@@ -514,11 +528,12 @@ _get_frame_info(PyFrameObject *frame) {
         class_name_attribute = PyUnicode_New(0, 127); // empty string
     } else {
         class_name_attribute = PyUnicode_FromFormat(
-            "%c%c%s",
+            "%c%c%U",
             1, // 0x01 char denotes 'attribute'
             'c', // 'c' char denotes 'class name'
             class_name
         );
+        Py_DECREF(class_name);
     }
     if (class_name_attribute == NULL) {
         goto error;
