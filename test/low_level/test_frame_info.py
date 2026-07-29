@@ -45,10 +45,22 @@ class AClass:
         return getter_function(frame)
 
 
+def frame_with_no_locals():
+    return inspect.currentframe()
+
+
 def test_frame_info():
     frame = inspect.currentframe()
 
     assert frame
+    assert stat_profile_c.get_frame_info(frame) == stat_profile_python.get_frame_info(frame)
+
+
+def test_frame_info_with_no_locals():
+    frame = frame_with_no_locals()
+
+    assert frame
+    assert frame.f_code.co_varnames == ()
     assert stat_profile_c.get_frame_info(frame) == stat_profile_python.get_frame_info(frame)
 
 

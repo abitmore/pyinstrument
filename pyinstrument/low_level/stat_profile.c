@@ -96,6 +96,7 @@ static double ProfilerState_GetTime(ProfilerState *self) {
 
         if (!PyFloat_Check(result)) {
             PyErr_SetString(PyExc_RuntimeError, "custom time function must return a float");
+            Py_DECREF(result);
             return -1.0;
         }
 
@@ -299,6 +300,11 @@ _get_class_name_of_frame(PyFrameObject *frame, PyCodeObject *code) {
         return NULL;
     }
 
+    if (PyTuple_GET_SIZE(localsNames) == 0) {
+        Py_DECREF(localsNames);
+        return NULL;
+    }
+
     PyObject *firstArgName = PyTuple_GET_ITEM(localsNames, 0);
 
     if (firstArgName == NULL) {
@@ -321,8 +327,8 @@ _get_class_name_of_frame(PyFrameObject *frame, PyCodeObject *code) {
 
     PyObject *locals = PyFrame_GetLocals(frame);
 
-    if (!PyMapping_Check(locals)) {
-        Py_DECREF(locals);
+    if (locals == NULL || !PyMapping_Check(locals)) {
+        Py_XDECREF(locals);
         return NULL;
     }
 
@@ -496,10 +502,15 @@ static PyObject *
 _get_frame_info(PyFrameObject *frame) {
     PyCodeObject *code = code_from_frame(frame);
 
-    PyObject *class_name_attribute;
+    PyObject *class_name_attribute = NULL;
+    PyObject *line_number_attribute = NULL;
+    PyObject *frame_hidden_attribute = NULL;
 
     const char *class_name = _get_class_name_of_frame(frame, code);
     if (class_name == NULL) {
+        if (PyErr_Occurred()) {
+            goto error;
+        }
         class_name_attribute = PyUnicode_New(0, 127); // empty string
     } else {
         class_name_attribute = PyUnicode_FromFormat(
@@ -509,8 +520,9 @@ _get_frame_info(PyFrameObject *frame) {
             class_name
         );
     }
-
-    PyObject *line_number_attribute;
+    if (class_name_attribute == NULL) {
+        goto error;
+    }
 
     int line_number = PyFrame_GetLineNumber(frame);
     if (line_number < 1) {
@@ -523,8 +535,9 @@ _get_frame_info(PyFrameObject *frame) {
             line_number
         );
     }
-
-    PyObject *frame_hidden_attribute;
+    if (line_number_attribute == NULL) {
+        goto error;
+    }
 
     int tracebackhide = _get_tracebackhide(frame, code);
     if (tracebackhide <= 0) {
@@ -536,6 +549,9 @@ _get_frame_info(PyFrameObject *frame) {
             'h', // 'h' char denotes 'frame hidden'
             '1' // '1' char denotes 'true'
         );
+    }
+    if (frame_hidden_attribute == NULL) {
+        goto error;
     }
 
     PyObject *result = PyUnicode_FromFormat(
@@ -556,6 +572,13 @@ _get_frame_info(PyFrameObject *frame) {
     Py_DECREF(frame_hidden_attribute);
 
     return result;
+
+error:
+    Py_DECREF(code);
+    Py_XDECREF(class_name_attribute);
+    Py_XDECREF(line_number_attribute);
+    Py_XDECREF(frame_hidden_attribute);
+    return NULL;
 }
 
 static int
@@ -651,6 +674,11 @@ profile(PyObject *op, PyFrameObject *frame, int what, PyObject *arg)
 
     if ((what == WHAT_RETURN) && (code->co_flags & 0x80)) {
         PyObject *frame_identifier = _get_frame_info(frame);
+        if (frame_identifier == NULL) {
+            Py_DECREF(code);
+            PyEval_SetProfile(NULL, NULL);
+            return -1;
+        }
 
         int status = PyList_Append(pState->await_stack_list, frame_identifier);
         Py_DECREF(frame_identifier);
@@ -769,6 +797,9 @@ setstatprofile(PyObject *m, PyObject *args, PyObject *kwds)
 
         // initialise the last invocation to avoid immediate callback
         pState->last_invocation = ProfilerState_GetTime(pState);
+        if (pState->last_invocation == -1.0 && PyErr_Occurred()) {
+            goto error;
+        }
 
         if (context_var) {
             Py_INCREF(context_var);
