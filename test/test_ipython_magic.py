@@ -1,3 +1,4 @@
+import re
 import signal
 import textwrap
 from test.fake_time_util import fake_time
@@ -49,10 +50,11 @@ def test_magics(ip):
 
     assert "function_a" in output.data["text/html"]
     assert "<iframe" in output.data["text/html"]
-    assert "function_a" in output.data["text/plain"]
+    plain_text = re.sub(r"\x1b\[[0-9;]*m", "", output.data["text/plain"])
+    assert "function_a" in plain_text
 
-    assert "- 0.200 function_a" in output.data["text/plain"]
-    assert "- 0.100 FakeClock.sleep" in output.data["text/plain"]
+    assert "0.200 function_a" in plain_text
+    assert "0.100 FakeClock.sleep" in plain_text
 
     with fake_time():
         with capture_ipython_output() as captured:
@@ -62,8 +64,9 @@ def test_magics(ip):
     assert len(captured.outputs) == 1
     output = captured.outputs[0]
 
-    assert "function_a" in output.data["text/plain"]
-    assert "- 0.100 FakeClock.sleep" in output.data["text/plain"]
+    plain_text = re.sub(r"\x1b\[[0-9;]*m", "", output.data["text/plain"])
+    assert "function_a" in plain_text
+    assert "0.100 FakeClock.sleep" in plain_text
 
 
 @pytest.mark.ipythonmagic
