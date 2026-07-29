@@ -298,17 +298,17 @@ class PyinstrumentMagic(Magics):
         #
         # Please keep an eye on this issue to see if there's a better way:
         # https://github.com/ipython/ipython/issues/11314
-        old_loop = asyncio.get_event_loop()
         loop = asyncio.new_event_loop()
+        thread = threading.Thread(target=loop.run_forever)
         try:
-            threading.Thread(target=loop.run_forever).start()
-            asyncio.set_event_loop(loop)
+            thread.start()
             coro = ip.run_cell_async(code)
             future = asyncio.run_coroutine_threadsafe(coro, loop)
             return future.result()
         finally:
             loop.call_soon_threadsafe(loop.stop)
-            asyncio.set_event_loop(old_loop)
+            thread.join()
+            loop.close()
 
 
 IPYTHON_INTERNAL_FILES = (
