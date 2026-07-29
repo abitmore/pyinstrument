@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import contextvars
+import subprocess
+import sys
 import time
 from typing import Any
 
 import pytest
+
+from pyinstrument.low_level.stat_profile_python import setstatprofile as setstatprofile_python
 
 from ..util import busy_wait
 from .util import parametrize_setstatprofile
@@ -15,6 +19,37 @@ def test_context_type(setstatprofile):
     with pytest.raises(TypeError):
         setstatprofile(lambda f, e, a: 0, 1e6, "not a context var")
         setstatprofile(None)
+
+
+def test_context_without_default():
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import contextvars
+from pyinstrument.low_level.stat_profile import setstatprofile
+
+context_var = contextvars.ContextVar("context_var")
+setstatprofile(lambda frame, event, arg: None, context_var=context_var)
+setstatprofile(None)
+""",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_python_context_without_default():
+    context_var: contextvars.ContextVar[object | None] = contextvars.ContextVar("context_var")
+
+    setstatprofile_python(lambda frame, event, arg: None, context_var=context_var)
+    try:
+        assert sys.getprofile() is not None
+    finally:
+        setstatprofile_python(None)
 
 
 profiler_context_var: contextvars.ContextVar[object | None] = contextvars.ContextVar(

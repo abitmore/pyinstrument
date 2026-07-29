@@ -60,7 +60,7 @@ static void ProfilerState_SetTarget(ProfilerState *self, PyObject *target) {
 static int ProfilerState_UpdateContextVar(ProfilerState *self) {
     PyObject *old = self->last_context_var_value;
     PyObject *new = NULL;
-    int status = PyContextVar_Get(self->context_var, NULL, &new);
+    int status = PyContextVar_Get(self->context_var, Py_None, &new);
     if (status == -1) {
         PyErr_SetString(PyExc_Exception, "failed to get value of the context var");
         return 0;
