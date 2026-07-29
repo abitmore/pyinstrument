@@ -1,4 +1,3 @@
-import re
 import signal
 import textwrap
 from test.fake_time_util import fake_time
@@ -6,6 +5,8 @@ from threading import Thread
 from time import sleep
 
 import pytest
+
+from .util import strip_ansi
 
 # note: IPython should be imported within each test. Importing it in our tests
 # seems to cause problems with subsequent tests.
@@ -50,7 +51,7 @@ def test_magics(ip):
 
     assert "function_a" in output.data["text/html"]
     assert "<iframe" in output.data["text/html"]
-    plain_text = re.sub(r"\x1b\[[0-9;]*m", "", output.data["text/plain"])
+    plain_text = strip_ansi(output.data["text/plain"])
     assert "function_a" in plain_text
 
     assert "0.200 function_a" in plain_text
@@ -64,7 +65,7 @@ def test_magics(ip):
     assert len(captured.outputs) == 1
     output = captured.outputs[0]
 
-    plain_text = re.sub(r"\x1b\[[0-9;]*m", "", output.data["text/plain"])
+    plain_text = strip_ansi(output.data["text/plain"])
     assert "function_a" in plain_text
     assert "0.100 FakeClock.sleep" in plain_text
 
