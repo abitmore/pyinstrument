@@ -104,7 +104,11 @@ class StackSampler:
                 self.subscribers.remove(subscriber)
             if context_token is not None:
                 active_profiler_context_var.reset(context_token)
-            self._update()
+            try:
+                self._update()
+            except BaseException:
+                # Preserve the original subscription error if rollback also fails.
+                pass
             raise
 
     def unsubscribe(self, target: StackSamplerSubscriberTarget):
