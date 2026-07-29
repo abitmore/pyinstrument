@@ -292,7 +292,11 @@ local_names_from_code(PyCodeObject *code)
  */
 static PyObject *
 _get_type_qualname(PyTypeObject *type) {
+#if PY_VERSION_HEX >= 0x030b0000 // Python 3.11.0
+    PyObject *qualname = PyType_GetQualName(type);
+#else
     PyObject *qualname = PyObject_GetAttrString((PyObject *)type, "__qualname__");
+#endif
     if (qualname == NULL) {
         return NULL;
     }
